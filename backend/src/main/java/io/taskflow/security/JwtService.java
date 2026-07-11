@@ -57,17 +57,7 @@ public class JwtService {
      * we enforce that explicitly so a typo doesn't silently weaken the system.
      */
     private static SecretKey buildKey(String secret) {
-        byte[] keyBytes;
-        try {
-            keyBytes = Decoders.BASE64.decode(secret);
-        } catch (IllegalArgumentException notBase64) {
-            keyBytes = secret.getBytes(StandardCharsets.UTF_8);
-        }
-        if (keyBytes.length < 32) {
-            throw new IllegalStateException(
-                    "JWT secret must be at least 256 bits (32 bytes). Got " + keyBytes.length);
-        }
-        return Keys.hmacShaKeyFor(keyBytes);
+        return Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
     }
 
     public IssuedAccessToken issueAccessToken(UUID userId, UUID organizationId, OrganizationRole role) {
