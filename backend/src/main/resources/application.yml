@@ -50,7 +50,8 @@ spring:
           max-active: 16
           max-idle: 8
           min-idle: 2
-
+      ssl:
+        enabled: true
   jackson:
     default-property-inclusion: non_null
     serialization:
