@@ -73,9 +73,13 @@ public class RedisConfig {
     @Bean(destroyMethod = "destroy")
     public RedisMessageListenerContainer redisMessageListenerContainer(
             RedisConnectionFactory cf) {
-        RedisMessageListenerContainer c = new RedisMessageListenerContainer();
+        RedisMessageListenerContainer c = new RedisMessageListenerContainer() {
+            @Override
+            public boolean isAutoStartup() {
+                return false; // don't start during context refresh
+            }
+        };
         c.setConnectionFactory(cf);
-        c.setAutoStartup(false);
         return c;
     }
 
