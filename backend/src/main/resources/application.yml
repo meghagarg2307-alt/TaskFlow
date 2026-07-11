@@ -43,16 +43,19 @@ spring:
     redis:
       host: ${REDIS_HOST:localhost}
       port: ${REDIS_PORT:6379}
+      # Upstash ACL user is "default"; local Docker Redis usually accepts this too.
       username: ${REDIS_USERNAME:default}
       password: ${REDIS_PASSWORD:}
-      timeout: 2000ms
+      # Render → Upstash often needs more than 2s for TLS + AUTH on cold start.
+      timeout: ${REDIS_TIMEOUT:5s}
       lettuce:
         pool:
           max-active: 16
           max-idle: 8
           min-idle: 2
       ssl:
-        enabled: true
+        # false for local Compose Redis; true for Upstash (set REDIS_SSL_ENABLED=true).
+        enabled: ${REDIS_SSL_ENABLED:false}
   jackson:
     default-property-inclusion: non_null
     serialization:
@@ -89,6 +92,10 @@ taskflow:
   trash:
     retention-days: ${TRASH_RETENTION_DAYS:30}
     purge-cron: ${TRASH_PURGE_CRON:0 0 3 * * *}
+  redis:
+    pubsub:
+      startup-max-attempts: ${REDIS_PUBSUB_STARTUP_MAX_ATTEMPTS:12}
+      startup-retry-delay-ms: ${REDIS_PUBSUB_STARTUP_RETRY_DELAY_MS:5000}
 
 management:
   endpoints:

@@ -5,12 +5,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import io.taskflow.dto.event.BoardEvent;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.data.redis.core.script.RedisScript;
 import org.springframework.data.redis.listener.RedisMessageListenerContainer;
@@ -67,14 +65,17 @@ public class RedisConfig {
     }
 
     /**
-     * Single shared listener container — handles all subscriptions (extensible to
-     * additional channels without spawning multiple connection pools).
+     * Shared Pub/Sub listener container. {@code autoStartup=false} so a transient
+     * Redis outage (or Upstash TLS handshake delay) does not abort Spring Boot
+     * context refresh — {@link io.taskflow.websocket.RedisPubSubBootstrap} starts
+     * it after the app is ready, with retries.
      */
     @Bean(destroyMethod = "destroy")
     public RedisMessageListenerContainer redisMessageListenerContainer(
             RedisConnectionFactory cf) {
         RedisMessageListenerContainer c = new RedisMessageListenerContainer();
         c.setConnectionFactory(cf);
+        c.setAutoStartup(false);
         return c;
     }
 

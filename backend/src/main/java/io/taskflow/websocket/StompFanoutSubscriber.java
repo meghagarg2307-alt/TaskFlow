@@ -7,7 +7,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.redis.connection.Message;
 import org.springframework.data.redis.connection.MessageListener;
-import org.springframework.data.redis.listener.PatternTopic;
+import org.springframework.data.redis.listener.ChannelTopic;
 import org.springframework.data.redis.listener.RedisMessageListenerContainer;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Component;
@@ -24,8 +24,11 @@ import java.util.UUID;
  * {@link SimpMessagingTemplate#convertAndSend}. The broadcaster never sends to STOMP
  * directly — that would skip the Redis hop and break multi-instance topology.</p>
  *
- * <p>Topic routing is identical to Step 4: events with a {@code boardId} go to
+ * <p>Topic routing: events with a {@code boardId} go to
  * {@code /topic/boards/{boardId}}; everything else to {@code /topic/orgs/{orgId}}.</p>
+ *
+ * <p>Subscription is registered here; the container itself is started by
+ * {@link RedisPubSubBootstrap} after the application is ready.</p>
  */
 @Slf4j
 @Component
@@ -48,8 +51,10 @@ public class StompFanoutSubscriber implements MessageListener {
 
     @PostConstruct
     void register() {
-        container.addMessageListener(this, new PatternTopic(BoardEventBroadcaster.REDIS_CHANNEL));
-        log.info("Subscribed to Redis channel '{}' for STOMP fan-out",
+        // ChannelTopic → SUBSCRIBE (matches convertAndSend / PUBLISH). PatternTopic
+        // would use PSUBSCRIBE and is the wrong API for a literal channel name.
+        container.addMessageListener(this, new ChannelTopic(BoardEventBroadcaster.REDIS_CHANNEL));
+        log.info("Registered Redis channel '{}' for STOMP fan-out (container starts after ready)",
                 BoardEventBroadcaster.REDIS_CHANNEL);
     }
 

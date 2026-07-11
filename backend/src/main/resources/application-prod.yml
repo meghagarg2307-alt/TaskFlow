@@ -11,6 +11,13 @@ spring:
     properties:
       hibernate:
         format_sql: false
+  data:
+    redis:
+      # Upstash / managed Redis in production expects TLS. Override with
+      # REDIS_SSL_ENABLED=false only if your prod Redis is plaintext (not recommended).
+      ssl:
+        enabled: ${REDIS_SSL_ENABLED:true}
+      timeout: ${REDIS_TIMEOUT:10s}
 
 server:
   # Don't leak exception details to clients in production. The GlobalExceptionHandler

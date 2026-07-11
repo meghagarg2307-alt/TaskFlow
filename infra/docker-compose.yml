@@ -81,10 +81,11 @@ services:
       DB_PASSWORD: ${DB_PASSWORD}
       DB_POOL_SIZE: ${DB_POOL_SIZE:-20}
 
-      # Cache
-      REDIS_HOST:     cache
-      REDIS_PORT:     6379
-      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
+      # Cache (local Compose Redis has no TLS)
+      REDIS_HOST:          cache
+      REDIS_PORT:          6379
+      REDIS_PASSWORD:      ${REDIS_PASSWORD:-}
+      REDIS_SSL_ENABLED:   "false"
 
       # Security
       JWT_SECRET:       ${JWT_SECRET:?JWT_SECRET is required (see infra/.env.example)}
