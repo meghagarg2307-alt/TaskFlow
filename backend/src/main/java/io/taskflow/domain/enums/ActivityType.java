@@ -1,0 +1,42 @@
+package io.taskflow.domain.enums;
+
+/**
+ * Discriminator for the activity feed. Each value defines the shape of the JSON payload
+ * stored in {@code activity_log.payload} (jsonb) — kept open-ended so the feed can grow
+ * without schema migrations.
+ */
+public enum ActivityType {
+    ORGANIZATION_UPDATED,
+    ORGANIZATION_DELETED,
+    ORGANIZATION_RESTORED,
+    ORGANIZATION_PERMANENTLY_DELETED,
+    PROJECT_CREATED,
+    PROJECT_UPDATED,
+    PROJECT_DELETED,
+    PROJECT_RESTORED,
+    PROJECT_PERMANENTLY_DELETED,
+    BOARD_CREATED,
+    BOARD_UPDATED,
+    BOARD_DELETED,
+    BOARD_RESTORED,
+    BOARD_PERMANENTLY_DELETED,
+    COLUMN_CREATED,
+    COLUMN_UPDATED,
+    COLUMN_DELETED,
+    COLUMN_RESTORED,
+    COLUMN_PERMANENTLY_DELETED,
+    TASK_CREATED,
+    TASK_UPDATED,
+    TASK_MOVED,
+    TASK_ASSIGNED,
+    TASK_UNASSIGNED,
+    TASK_DELETED,
+    TASK_RESTORED,
+    TASK_PERMANENTLY_DELETED,
+    COMMENT_ADDED,
+    COMMENT_DELETED,
+    MEMBER_INVITED,
+    MEMBER_JOINED,
+    MEMBER_REMOVED,
+    MEMBER_ROLE_CHANGED
+}

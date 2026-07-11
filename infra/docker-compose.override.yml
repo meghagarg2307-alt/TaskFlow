@@ -1,0 +1,37 @@
+# =============================================================================
+# Dev overrides — picked up automatically by `docker compose up` when this file
+# sits next to docker-compose.yml. Intentionally NOT used in production.
+#
+# Adds:
+#   - host-port exposure for db (so your IDE can connect for inspection)
+#   - host-port exposure for cache (redis-cli MONITOR is wonderful)
+#   - verbose Spring logs
+#   - sensible cookie defaults for plain-HTTP local browsing
+#
+# Opt out in prod:
+#   docker compose -f docker-compose.yml up -d --build   # ignores override
+# =============================================================================
+
+services:
+  db:
+    ports:
+      - "5432:5432"
+
+  cache:
+    ports:
+      - "6379:6379"
+
+  api:
+    environment:
+      # `dev` profile keeps DEBUG logging on io.taskflow + full error payloads.
+      SPRING_PROFILES_ACTIVE: dev
+      # Local browser at http://localhost can't accept Secure cookies, and SameSite=Strict
+      # blocks the refresh cookie when ng serve runs on a different host:port.
+      COOKIE_SECURE: "false"
+      COOKIE_SAMESITE: Lax
+      # Allow ng serve at :4200 to talk to the dockerized API directly during dev.
+      CORS_ORIGINS: "http://localhost,http://localhost:4200"
+      WS_ORIGINS:   "http://localhost,http://localhost:4200"
+    # Bypass the nginx hop when debugging the API directly.
+    ports:
+      - "8080:8080"

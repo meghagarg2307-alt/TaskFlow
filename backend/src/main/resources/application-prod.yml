@@ -1,0 +1,45 @@
+# =============================================================================
+# Production profile — activated via SPRING_PROFILES_ACTIVE=prod (set in compose).
+#
+# All secrets and host-specific values stay in environment variables (see the
+# base application.yml for the full list); this profile only locks down behaviour
+# that differs from the local dev experience.
+# =============================================================================
+
+spring:
+  jpa:
+    properties:
+      hibernate:
+        format_sql: false
+
+server:
+  # Don't leak exception details to clients in production. The GlobalExceptionHandler
+  # still emits structured ApiError responses (message, code, traceId) for known
+  # failures — these flags only suppress the stack traces and validation echoes
+  # that Spring Boot's default error machinery would otherwise expose.
+  error:
+    include-message: never
+    include-binding-errors: never
+    include-stacktrace: never
+    include-exception: false
+
+management:
+  endpoint:
+    health:
+      # The container HEALTHCHECK only needs "UP" / "DOWN"; hide subsystem details
+      # behind the actuator role. Re-enable selectively if scraping for ops dashboards.
+      show-details: never
+  endpoints:
+    web:
+      exposure:
+        # Limit the surface area in prod. Re-add `metrics,prometheus` if you wire
+        # up a Prometheus scraper on a private network.
+        include: health,info
+
+logging:
+  level:
+    root: INFO
+    io.taskflow: INFO
+    org.springframework.web.socket: WARN
+    org.hibernate.SQL: WARN
+    com.zaxxer.hikari: WARN

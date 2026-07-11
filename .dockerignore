@@ -1,0 +1,36 @@
+# Build context is the repo root for both Dockerfiles — keep it lean.
+
+# ---- VCS / IDE ----
+.git
+.gitignore
+.gitattributes
+.github
+.idea
+.vscode
+*.iml
+
+# ---- Documentation ----
+*.md
+docs/
+
+# ---- Frontend artifacts ----
+frontend/node_modules
+frontend/dist
+frontend/.angular
+frontend/out-tsc
+frontend/coverage
+
+# ---- Backend artifacts ----
+backend/target
+backend/.mvn
+backend/mvnw
+backend/mvnw.cmd
+backend/HELP.md
+
+# ---- Misc local ----
+*.log
+.DS_Store
+Thumbs.db
+.env
+.env.*
+!infra/.env.example

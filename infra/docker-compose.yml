@@ -1,0 +1,119 @@
+# =============================================================================
+# TaskFlow — production-shaped docker-compose stack.
+#
+# Run from this directory:   docker compose up -d --build
+# Run from repo root:        docker compose -f infra/docker-compose.yml up -d --build
+#
+# Layout:
+#   db    — PostgreSQL 16 (named volume for durability)
+#   cache — Redis 7 (AOF for restart resilience)
+#   api   — Spring Boot (waits for db + cache to be healthy; runs Flyway on boot)
+#   web   — Nginx serving the Angular SPA AND reverse-proxying /api + /ws to api
+#
+# The dev override file in this directory (docker-compose.override.yml) is
+# picked up automatically by `docker compose up` and adds:
+#   - host-port exposure for db (5432) and cache (6379)
+#   - dev-friendly logging
+# In production, run with `--file docker-compose.yml --no-override` or set
+# COMPOSE_FILE explicitly to opt out.
+# =============================================================================
+
+name: taskflow
+
+services:
+  # ---------------------------------------------------------------------------
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB:       ${DB_NAME:-taskflow}
+      POSTGRES_USER:     ${DB_USER:-taskflow}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required (see infra/.env.example)}
+      # Tune to your host. PG defaults are conservative.
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout:  3s
+      retries:  6
+      start_period: 10s
+    networks: [internal]
+
+  # ---------------------------------------------------------------------------
+  cache:
+    image: redis:7-alpine
+    restart: unless-stopped
+    # Append-only file gives durability across container restarts at the cost of
+    # ~1 fsync/sec. Skip with `redis-server --save ""` if you treat cache as
+    # truly ephemeral and want a tiny perf win.
+    command: ["redis-server", "--appendonly", "yes", "--loglevel", "warning"]
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout:  3s
+      retries:  6
+    networks: [internal]
+
+  # ---------------------------------------------------------------------------
+  # After `docker compose up -d --build api` alone, restart `web` too (or rebuild
+  # web so nginx picks up infra/nginx.conf DNS fixes) — otherwise nginx may 502.
+  api:
+    build:
+      context: ..
+      dockerfile: backend/Dockerfile
+    ports:
+    - "8080:8080"  
+    restart: unless-stopped
+    depends_on:
+      db:    { condition: service_healthy }
+      cache: { condition: service_healthy }
+    environment:
+      # Profile flips logging + error verbosity (see application-prod.yml).
+      SPRING_PROFILES_ACTIVE: prod
+
+      # Datasource
+      DB_URL:      jdbc:postgresql://db:5432/${DB_NAME:-taskflow}
+      DB_USER:     ${DB_USER:-taskflow}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_POOL_SIZE: ${DB_POOL_SIZE:-20}
+
+      # Cache
+      REDIS_HOST:     cache
+      REDIS_PORT:     6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
+
+      # Security
+      JWT_SECRET:       ${JWT_SECRET:?JWT_SECRET is required (see infra/.env.example)}
+      CORS_ORIGINS:     ${PUBLIC_URL:-http://localhost}
+      WS_ORIGINS:       ${PUBLIC_URL:-http://localhost}
+      COOKIE_SECURE:    ${COOKIE_SECURE:-false}
+      COOKIE_SAMESITE:  ${COOKIE_SAMESITE:-Strict}
+    networks: [internal]
+    # No host-port mapping — only nginx (`web`) can reach the API. Closes off
+    # direct API access for tighter blast radius.
+
+  # ---------------------------------------------------------------------------
+  web:
+    build:
+      context: ..
+      dockerfile: frontend/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      api: { condition: service_healthy }
+    ports:
+      - "${HTTP_PORT:-80}:80"
+    networks: [internal]
+
+# -----------------------------------------------------------------------------
+volumes:
+  pg_data:
+  redis_data:
+
+# Single internal network — no public exposure besides `web`'s port mapping.
+networks:
+  internal:
+    driver: bridge

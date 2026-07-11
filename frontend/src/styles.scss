@@ -1,0 +1,164 @@
+// =========================================================================
+// TaskFlow — global styles & design tokens
+//
+// Single-file design system: CSS custom properties for every color, spacing,
+// and elevation. Switching themes is a class swap on <body>, no rebuild.
+// =========================================================================
+
+:root {
+  // Brand
+  --color-brand-50:  #eef2ff;
+  --color-brand-100: #e0e7ff;
+  --color-brand-500: #6366f1;
+  --color-brand-600: #4f46e5;
+  --color-brand-700: #4338ca;
+
+  // Neutrals (light)
+  --color-bg:          #f8fafc;
+  --color-surface:     #ffffff;
+  --color-surface-alt: #f1f5f9;
+  --color-border:      #e2e8f0;
+  --color-text:        #0f172a;
+  --color-text-muted:  #64748b;
+
+  // Status
+  --color-success: #16a34a;
+  --color-warning: #d97706;
+  --color-danger:  #dc2626;
+  --color-info:    #0284c7;
+
+  // Priority colors (used by kanban tasks in Step 7)
+  --priority-low:    #94a3b8;
+  --priority-medium: #0ea5e9;
+  --priority-high:   #f59e0b;
+  --priority-urgent: #ef4444;
+
+  // Spacing scale (4-px grid)
+  --space-1:  4px;
+  --space-2:  8px;
+  --space-3:  12px;
+  --space-4:  16px;
+  --space-5:  24px;
+  --space-6:  32px;
+  --space-8:  48px;
+
+  // Radii
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+
+  // Elevation
+  --shadow-1: 0 1px 2px rgba(15, 23, 42, 0.06), 0 1px 3px rgba(15, 23, 42, 0.05);
+  --shadow-2: 0 4px 8px rgba(15, 23, 42, 0.06), 0 2px 4px rgba(15, 23, 42, 0.04);
+  --shadow-3: 0 16px 32px rgba(15, 23, 42, 0.10), 0 4px 8px rgba(15, 23, 42, 0.05);
+
+  // Typography
+  --font-sans: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-size-xs: 12px;
+  --font-size-sm: 13px;
+  --font-size-md: 14px;
+  --font-size-lg: 16px;
+  --font-size-xl: 20px;
+  --font-size-2xl: 28px;
+
+  --line-tight: 1.25;
+  --line-normal: 1.5;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-bg:          #0b1120;
+    --color-surface:     #131b2d;
+    --color-surface-alt: #1c2540;
+    --color-border:      #243150;
+    --color-text:        #e2e8f0;
+    --color-text-muted:  #94a3b8;
+  }
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  font-family: var(--font-sans);
+  font-size: var(--font-size-md);
+  line-height: var(--line-normal);
+  color: var(--color-text);
+  background: var(--color-bg);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+a {
+  color: var(--color-brand-600);
+  text-decoration: none;
+  &:hover { text-decoration: underline; }
+}
+
+button {
+  font-family: inherit;
+  font-size: inherit;
+  cursor: pointer;
+}
+
+input, textarea, select, button {
+  font: inherit;
+  color: inherit;
+}
+
+// Shared utility classes (used by Step 6 + 7 components)
+.tf-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  font-weight: 500;
+  background: var(--color-brand-600);
+  color: #fff;
+  transition: background 120ms ease, transform 120ms ease;
+
+  &:hover:not(:disabled) { background: var(--color-brand-700); }
+  &:active:not(:disabled) { transform: translateY(1px); }
+  &:disabled { opacity: 0.55; cursor: not-allowed; }
+
+  &.tf-btn--ghost {
+    background: transparent;
+    color: var(--color-text);
+    border-color: var(--color-border);
+    &:hover:not(:disabled) { background: var(--color-surface-alt); }
+  }
+
+  &.tf-btn--danger {
+    background: var(--color-danger);
+    &:hover:not(:disabled) { background: color-mix(in srgb, var(--color-danger), black 10%); }
+  }
+}
+
+.tf-input {
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  transition: border-color 120ms ease, box-shadow 120ms ease;
+
+  &:focus {
+    outline: none;
+    border-color: var(--color-brand-500);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-brand-500), transparent 75%);
+  }
+}
+
+.tf-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-1);
+}
+
+.tf-muted { color: var(--color-text-muted); }
