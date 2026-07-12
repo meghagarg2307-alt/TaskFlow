@@ -158,7 +158,8 @@ frontend/       Angular SPA
 infra/
   docker-compose.yml          production-shaped stack
   docker-compose.override.yml dev conveniences
-  nginx.conf                  reverse proxy + SPA fallback
+  nginx.conf.template         reverse proxy + SPA (envsubst at start)
+  nginx.conf                  pointer to the template / env vars
   .env.example                template for required secrets
 ```
 

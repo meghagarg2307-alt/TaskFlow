@@ -5,6 +5,10 @@
 # Single container does double duty: it serves the SPA bundle AND fronts the
 # backend API + WebSocket. Build context: repository root.
 #   build: { context: .., dockerfile: frontend/Dockerfile }
+#
+# Upstream is NOT baked into the image. At start, the official nginx entrypoint
+# runs envsubst on /etc/nginx/templates/*.template → /etc/nginx/conf.d/, using:
+#   API_UPSTREAM, API_HOST, NGINX_RESOLVER
 # ---------------------------------------------------------------------------
 
 # ============ Stage 1: build the SPA ============
@@ -22,14 +26,26 @@ RUN npm run build
 # ============ Stage 2: nginx runtime ============
 FROM nginx:1.27-alpine AS runtime
 
-# Drop the stock catch-all server block; ours owns port 80.
-RUN rm /etc/nginx/conf.d/default.conf
+# Drop the stock catch-all; our template becomes conf.d/default.conf at start.
+RUN rm -f /etc/nginx/conf.d/default.conf
 
-# Reverse-proxy + SPA-fallback config lives in infra/, shared with ops.
-COPY infra/nginx.conf /etc/nginx/conf.d/taskflow.conf
+# Template → envsubst at container start (official nginx docker entrypoint).
+COPY infra/nginx.conf.template /etc/nginx/templates/default.conf.template
+
+# Fail fast if required upstream env vars are missing.
+COPY frontend/docker-entrypoint.d/15-check-api-upstream.sh \
+     /docker-entrypoint.d/15-check-api-upstream.sh
+RUN chmod +x /docker-entrypoint.d/15-check-api-upstream.sh
 
 # Angular 17+ application builder emits to dist/<project>/browser/.
 COPY --from=build /workspace/dist/taskflow/browser /usr/share/nginx/html
+
+# Defaults match Docker Compose (override on Render via service env).
+# NGINX_ENVSUBST_FILTER limits envsubst to these names so nginx $vars stay intact.
+ENV API_UPSTREAM=http://api:8080 \
+    API_HOST=api \
+    NGINX_RESOLVER=127.0.0.11 \
+    NGINX_ENVSUBST_FILTER=^(API_|NGINX_RESOLVER$)
 
 EXPOSE 80
 

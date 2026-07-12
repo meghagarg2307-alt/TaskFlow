@@ -1,0 +1,122 @@
+# =============================================================================
+# TaskFlow nginx server block — TEMPLATE
+#
+# Processed at container start by the official nginx image entrypoint via
+# envsubst (files under /etc/nginx/templates/*.template → /etc/nginx/conf.d/).
+#
+# Required environment variables (substituted at runtime — never hardcode):
+#   API_UPSTREAM    Full upstream base URL, no trailing slash.
+#                     Local Compose:  http://api:8080
+#                     Render:         https://taskblow-backend.onrender.com
+#   API_HOST        Host header sent to the upstream (virtual-host / TLS SNI).
+#                     Local Compose:  api
+#                     Render:         taskblow-backend.onrender.com
+#   NGINX_RESOLVER  DNS resolver used when proxy_pass uses a variable.
+#                     Local Compose:  127.0.0.11   (Docker embedded DNS)
+#                     Render:         1.1.1.1      (or 8.8.8.8)
+#
+# Only ${API_*}/${NGINX_RESOLVER} are substituted (see NGINX_ENVSUBST_FILTER).
+# Nginx runtime variables ($host, $scheme, …) are left untouched.
+# =============================================================================
+
+map $http_upgrade $connection_upgrade {
+  default upgrade;
+  ''      close;
+}
+
+server {
+  listen      80 default_server;
+  listen      [::]:80 default_server;
+  server_name _;
+
+  client_max_body_size 8m;
+
+  gzip              on;
+  gzip_vary         on;
+  gzip_min_length   1024;
+  gzip_comp_level   6;
+  gzip_proxied      any;
+  gzip_types        text/plain text/css application/json application/javascript
+                    application/xml application/xml+rss text/javascript
+                    image/svg+xml application/vnd.ms-fontobject font/ttf;
+
+  add_header X-Content-Type-Options "nosniff"        always;
+  add_header X-Frame-Options         "DENY"           always;
+  add_header Referrer-Policy         "no-referrer"    always;
+  add_header Permissions-Policy      "geolocation=(), microphone=(), camera=()" always;
+
+  # Variable proxy_pass requires an explicit resolver so nginx can re-resolve
+  # the upstream after container recreates (Compose) or DNS TTL (Render).
+  resolver ${NGINX_RESOLVER} valid=10s ipv6=off;
+
+  # --------------------------------------------------------------------
+  # /api/* → backend (strip /api prefix to match Angular apiBaseUrl + Spring).
+  # --------------------------------------------------------------------
+  location /api/ {
+    set $upstream "${API_UPSTREAM}";
+    rewrite ^/api/(.*)$ /$1 break;
+    proxy_pass $upstream;
+
+    proxy_http_version 1.1;
+    # Upstream Host must be the API hostname (critical for Render TLS/vhosts).
+    proxy_set_header   Host              ${API_HOST};
+    proxy_set_header   X-Real-IP         $remote_addr;
+    proxy_set_header   X-Forwarded-For   $proxy_add_x_forwarded_for;
+    proxy_set_header   X-Forwarded-Proto $scheme;
+    proxy_set_header   X-Forwarded-Host  $host;
+    proxy_set_header   X-Trace-Id        $http_x_trace_id;
+
+    # Safe for http:// and https:// upstreams (no-op on plain HTTP).
+    proxy_ssl_server_name on;
+    proxy_ssl_protocols   TLSv1.2 TLSv1.3;
+
+    proxy_buffering    off;
+    proxy_read_timeout 60s;
+    proxy_send_timeout 60s;
+  }
+
+  # --------------------------------------------------------------------
+  # /ws → STOMP-over-WebSocket (browser wss://frontend/ws → upstream /ws).
+  # --------------------------------------------------------------------
+  location = /ws {
+    set $upstream "${API_UPSTREAM}";
+    proxy_pass         $upstream/ws;
+    proxy_http_version 1.1;
+
+    proxy_set_header   Upgrade           $http_upgrade;
+    proxy_set_header   Connection        $connection_upgrade;
+    proxy_set_header   Host              ${API_HOST};
+    proxy_set_header   X-Real-IP         $remote_addr;
+    proxy_set_header   X-Forwarded-For   $proxy_add_x_forwarded_for;
+    proxy_set_header   X-Forwarded-Proto $scheme;
+
+    proxy_ssl_server_name on;
+    proxy_ssl_protocols   TLSv1.2 TLSv1.3;
+
+    proxy_read_timeout 3600s;
+    proxy_send_timeout 3600s;
+  }
+
+  # --------------------------------------------------------------------
+  # Static SPA.
+  # --------------------------------------------------------------------
+  root  /usr/share/nginx/html;
+  index index.html;
+
+  location ~* \.(?:js|css|woff2?|ttf|eot|svg|png|jpg|jpeg|gif|webp|ico)$ {
+    expires    1y;
+    add_header Cache-Control "public, immutable";
+    try_files  $uri =404;
+  }
+
+  location / {
+    try_files  $uri $uri/ /index.html;
+    add_header Cache-Control "no-cache, must-revalidate";
+  }
+
+  location = /healthz {
+    access_log off;
+    add_header Content-Type text/plain;
+    return 200 "ok\n";
+  }
+}
